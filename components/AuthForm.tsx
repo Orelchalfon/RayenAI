@@ -1,6 +1,9 @@
 "use client"
 
+import { auth } from "@/firebase/client";
+import { signIn, signUp } from "@/lib/actions/auth.action";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from "firebase/auth";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -31,16 +34,47 @@ const AuthForm = ({ mode }: { mode: FormType }) => {
     });
 
     // 2. Define a submit handler.
-    function onSubmit(values: z.infer<typeof formSchema>) {
+    const onSubmit = async (values: z.infer<typeof formSchema>) => {
         try {
-            if (mode === "sign-in") {
+            if (isSignIn) {
+                const { email, password } = values;
+                // Perform sign-in action here
+                if (!email || !password) return;
+                const userCred = await signInWithEmailAndPassword(auth, email, password)
+                const idToken = await userCred.user.getIdToken()
+                if (!idToken) {
+                    toast.error("Something went wrong, please try again")
+                    return
+                }
 
-                console.log("Sign In", values);
+                await signIn({
+                    email: email,
+                    idToken: idToken
+                })
+
+
                 toast.success("Logged in successfully!")
                 router.push("/")
             }
             else {
                 console.log("Sign Up", values);
+
+                const { name, email, password } = values;
+                if (!email || !password || !name) return;
+
+                const userCred = await createUserWithEmailAndPassword(auth, email, password)
+                const res = await signUp({
+                    uid: userCred.user.uid,
+                    name: name,
+                    email: email,
+                    password: password
+                })
+                if (!res || !res?.success) {
+                    toast.error(res?.message)
+                    return
+
+                }
+
                 toast.success("Account created successfully!, please log in")
                 router.push("/sign-in")
             }
