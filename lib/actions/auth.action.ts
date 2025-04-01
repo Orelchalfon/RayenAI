@@ -91,9 +91,8 @@ export const getCurrentUser = async (): Promise<User | null> => {
         const userRecord = await db.collection('users').doc(decodedClaims.uid).get()
 
         if (!userRecord.exists) return null
-        const userData = userRecord.data()
         return {
-            ...userData,
+            ...userRecord.data(),
             id: userRecord.id
         } as User
     } catch (error: any) {
